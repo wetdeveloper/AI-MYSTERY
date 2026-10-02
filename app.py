@@ -123,7 +123,12 @@ async def ask_llm(prompt: str) -> LLMResponse:
         response.raise_for_status()
 
     data = response.json()
-    content = data["choices"][0]["message"]["content"]
+    content = data["choices"][0]["message"]["content"].strip()
+
+    if content.startswith("```"):
+        lines = content.splitlines()
+        lines = [line for line in lines if not line.strip().startswith("```")]
+        content = "\n".join(lines).strip()
 
     return LLMResponse.model_validate_json(content)
 
