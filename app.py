@@ -47,6 +47,19 @@ SUSPECTS = {
 CULPRIT = "daniel"
 
 
+def get_game_truth() -> dict:
+    return {
+        "culprit": CULPRIT,
+        "suspects": {
+            key: {
+                "name": value["name"],
+                "facts": value["facts"],
+            }
+            for key, value in SUSPECTS.items()
+        },
+    }
+
+
 class AskRequest(BaseModel):
     suspect: str
     question: str
@@ -171,10 +184,12 @@ async def accuse(suspect: str):
     if suspect not in SUSPECTS:
         return {"error": "Unknown suspect"}
 
-    correct = suspect == CULPRIT
+    truth = get_game_truth()
+    correct = suspect == truth["culprit"]
 
     return {
         "correct": correct,
+        "accused": SUSPECTS[suspect]["name"],
         "message": (
             "You solved the mystery."
             if correct
