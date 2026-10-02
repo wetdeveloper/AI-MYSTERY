@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mystery</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: #111;
+            color: #eee;
+        }
+
+        button {
+            padding: 10px 14px;
+            margin: 4px;
+            cursor: pointer;
+        }
+
+        input {
+            width: 70%;
+            padding: 12px;
+        }
+
+        #chat {
+            min-height: 300px;
+            padding: 20px;
+            background: #1b1b1b;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .message {
+            margin: 12px 0;
+        }
+
+        .you {
+            color: #8ab4f8;
+        }
+
+        .suspect {
+            color: #8fda8f;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>AI Mystery</h1>
+
+<p>
+    A prototype disappeared from the office.
+    Interrogate the suspects and find the culprit.
+</p>
+
+<div>
+    {% for key, suspect in suspects.items() %}
+        <button onclick="selectSuspect('{{ key }}')">
+            {{ suspect.name }} — {{ suspect.role }}
+        </button>
+    {% endfor %}
+</div>
+
+<h2 id="current">Select a suspect</h2>
+
+<div id="chat"></div>
+
+<input
+    id="question"
+    placeholder="Ask the suspect a question..."
+    onkeydown="if(event.key === 'Enter') askQuestion()"
+/>
+
+<button onclick="askQuestion()">Ask</button>
+
+<hr>
+
+<h3>Accuse</h3>
+
+{% for key, suspect in suspects.items() %}
+    <button onclick="accuse('{{ key }}')">
+        Accuse {{ suspect.name }}
+    </button>
+{% endfor %}
+
+<script>
+let currentSuspect = null;
+let history = [];
+
+function selectSuspect(suspect) {
+    currentSuspect = suspect;
+    history = [];
+
+    document.getElementById("chat").innerHTML = "";
+    document.getElementById("current").innerText =
+        "Interrogating: " + suspect;
+}
+
+function addMessage(who, text, className) {
+    const chat = document.getElementById("chat");
+
+    const div = document.createElement("div");
+    div.className = "message " + className;
+    div.innerHTML = `<strong>${who}:</strong> ${text}`;
+
+    chat.appendChild(div);
+}
+
+async function askQuestion() {
+    if (!currentSuspect) {
+        alert("Select a suspect first.");
+        return;
+    }
+
+    const input = document.getElementById("question");
+    const question = input.value.trim();
+
+    if (!question) return;
+
+    input.value = "";
+
+    addMessage("You", question, "you");
+
+    history.push({
+        role: "user",
+        content: question
+    });
+
+    const response = await fetch("/api/ask", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            suspect: currentSuspect,
+            question: question,
+            history: history
+        })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+        addMessage("System", data.error, "suspect");
+        return;
+    }
+
+    addMessage(data.suspect, data.reply, "suspect");
+
+    history.push({
+        role: "assistant",
+        content: data.reply
+    });
+}
+
+async function accuse(suspect) {
+    const response = await fetch("/api/accuse/" + suspect, {
+        method: "POST"
+    });
+
+    const data = await response.json();
+
+    alert(data.message);
+}
+</script>
+
+</body>
+</html>
